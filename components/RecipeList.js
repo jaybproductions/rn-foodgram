@@ -3,6 +3,7 @@ import { SafeAreaView, View } from "react-native";
 import RecipeCard from "./RecipeCard";
 import axios from "axios";
 import { ScrollView } from "react-native-gesture-handler";
+import firebase from "../firebase";
 
 function RecipeList() {
   const [recipes, setRecipes] = useState([]);
@@ -12,10 +13,22 @@ function RecipeList() {
 
   const getRecipes = async () => {
     try {
-      const response = await axios.get(
-        "https://759703459529.ngrok.io/recipes/all"
-      );
-      setRecipes(response.data);
+      let tempDoc = [];
+      firebase.db
+        .collection("recipes")
+        .get()
+        .then((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            // doc.data() is never undefined for query doc snapshots
+            tempDoc.push(doc.data());
+          });
+          setRecipes(tempDoc);
+        })
+        .catch((error) => {
+          console.log("Error getting documents: ", error);
+        });
+
+      //setRecipes(response.data);
     } catch (err) {
       console.error(err);
     }

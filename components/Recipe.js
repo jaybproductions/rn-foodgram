@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   SafeAreaView,
   Text,
@@ -6,8 +6,13 @@ import {
   StyleSheet,
   View,
   TouchableHighlight,
+  FlatList,
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import UserContext from "../contexts/UserContext";
+import firebase from "../firebase";
+import { Actions } from "react-native-router-flux";
 
 function TabIcon(iconName) {
   return (
@@ -17,17 +22,68 @@ function TabIcon(iconName) {
   );
 }
 
-function Recipe({ recipe }) {
-  const [liked, setLiked] = useState(false);
+function Recipe({ recipe, liked, setLiked }) {
   const [saved, setSaved] = useState(false);
+  const { user } = useContext(UserContext);
+
+  useEffect(() => {
+    if (!user) return;
+    handleCheckLikes();
+    console.warn(liked);
+  }, [liked]);
+
   const handleLike = () => {
-    console.warn("liked", recipe.name);
-    setLiked(!liked);
+    const docRef = firebase.db.collection("recipes").doc(recipe.id);
+    Actions.refresh({ recipe: recipe, liked: !liked, setLiked: setLiked });
+
+    docRef
+      .get()
+      .then((doc) => {
+        if (doc.exists) {
+          let tempLikes = [...doc.data().likedBy];
+          if (tempLikes.includes(user.uid)) {
+            setLiked(false);
+            const filtered = tempLikes.filter((item) => item !== user.uid);
+            firebase.db.collection("recipes").doc(recipe.id).update(
+              {
+                likedBy: filtered,
+              },
+              { merge: true }
+            );
+            return;
+          }
+          setLiked(true);
+          tempLikes.push(user.uid);
+          firebase.db.collection("recipes").doc(recipe.id).update(
+            {
+              likedBy: tempLikes,
+            },
+            { merge: true }
+          );
+          return;
+        } else {
+          // doc.data() will be undefined in this case
+          console.log("No such document!");
+        }
+      })
+      .catch((error) => {
+        console.log("Error getting document:", error);
+      });
   };
 
   const handleSave = () => {
     console.warn("saved", recipe.name);
     setSaved(!saved);
+  };
+
+  const handleCheckLikes = () => {
+    recipe.likedBy.forEach((like) => {
+      if (like === user.uid) {
+        return setLiked(true);
+      } else {
+        return setLiked(false);
+      }
+    });
   };
   return (
     <View>
@@ -37,42 +93,53 @@ function Recipe({ recipe }) {
         source={{ uri: recipe.photo }}
       >
         <View style={styles.overlay}>
+          <View style={styles.iconContainer}>
+            <Text
+              style={{
+                color: "white",
+              }}
+            >
+              {TabIcon("chevron-down-outline")}
+            </Text>
+            <View style={{ display: "flex", flexDirection: "row" }}>
+              <TouchableHighlight
+                onPress={handleLike}
+                activeOpacity={0.6}
+                underlayColor={false}
+              >
+                <Text
+                  style={
+                    liked
+                      ? { color: "red", padding: 10 }
+                      : { color: "white", padding: 10 }
+                  }
+                >
+                  {TabIcon("heart-outline")}
+                </Text>
+              </TouchableHighlight>
+              <TouchableHighlight
+                onPress={handleSave}
+                activeOpacity={0.6}
+                underlayColor={false}
+              >
+                <Text
+                  style={
+                    saved
+                      ? { color: "blue", padding: 10 }
+                      : { color: "white", padding: 10 }
+                  }
+                >
+                  {TabIcon("bookmark-outline")}
+                </Text>
+              </TouchableHighlight>
+            </View>
+          </View>
           <View style={styles.headerContainer}>
             <Text style={styles.headerText}>{recipe.name}</Text>
-            <TouchableHighlight
-              onPress={handleLike}
-              activeOpacity={0.6}
-              underlayColor={false}
-            >
-              <Text
-                style={
-                  liked
-                    ? { color: "red", padding: 10 }
-                    : { color: "white", padding: 10 }
-                }
-              >
-                {TabIcon("heart-outline")}
-              </Text>
-            </TouchableHighlight>
-            <TouchableHighlight
-              onPress={handleSave}
-              activeOpacity={0.6}
-              underlayColor={false}
-            >
-              <Text
-                style={
-                  saved
-                    ? { color: "blue", padding: 10 }
-                    : { color: "white", padding: 10 }
-                }
-              >
-                {TabIcon("bookmark-outline")}
-              </Text>
-            </TouchableHighlight>
           </View>
         </View>
       </ImageBackground>
-      <View style={styles.bodyContainer}>
+      <ScrollView style={styles.bodyContainer}>
         <Text>Posted by</Text>
         <View style={styles.profileInfo}>
           <TouchableHighlight
@@ -97,7 +164,16 @@ function Recipe({ recipe }) {
             <Text>{recipe.description}</Text>
           </View>
         </View>
-      </View>
+        <SafeAreaView style={styles.recipeContainer}>
+          <Text style={{ paddingTop: 20 }}>Recipe</Text>
+          <FlatList
+            data={recipe.recipe}
+            scrollEnabled={false}
+            keyExtractor={(recipe) => recipe.id}
+            renderItem={({ item }) => <Text style={styles.item}>{item}</Text>}
+          />
+        </SafeAreaView>
+      </ScrollView>
     </View>
   );
 }
@@ -107,6 +183,13 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 30,
     textAlign: "left",
+    fontWeight: "900",
+    position: "absolute",
+    bottom: 0,
+    left: 10,
+    textShadowColor: "rgba(0, 0, 0, 0.75)",
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
   description: {},
 
@@ -118,22 +201,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 10,
-    paddingTop: 50,
   },
   overlay: {
     backgroundColor: "rgba(0,0,0,0.5)",
     height: "100%",
-    display: "flex",
-    flexDirection: "row",
-    justifyContent: "space-between",
   },
   bodyContainer: {
-    padding: 10,
+    padding: 20,
   },
   profileInfo: {
     display: "flex",
     flexDirection: "row",
     alignItems: "center",
+  },
+  iconContainer: {
+    padding: 50,
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  recipeContainer: {
+    width: "80%",
+    margin: "auto",
+    padding: 20,
+    lineHeight: 10,
+  },
+  item: {
+    padding: 20,
+    marginVertical: 0,
+    marginHorizontal: 16,
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   SafeAreaView,
   Text,
@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Actions } from "react-native-router-flux";
-
+import UserContext from "../contexts/UserContext";
+import firebase from "../firebase";
 function TabIcon(iconName) {
   return (
     <Text style={styles.icon}>
@@ -23,20 +24,68 @@ function TabIcon(iconName) {
 
 function RecipeCard({ recipe }) {
   const [liked, setLiked] = useState(false);
+  const { user } = useContext(UserContext);
+
+  useEffect(() => {
+    handleCheckLikes();
+  }, []);
   const handleLike = () => {
-    console.warn("liked", recipe.name);
-    setLiked(!liked);
+    const docRef = firebase.db.collection("recipes").doc(recipe.id);
+
+    docRef
+      .get()
+      .then((doc) => {
+        if (doc.exists) {
+          let tempLikes = [...doc.data().likedBy];
+          if (tempLikes.includes(user.uid)) {
+            setLiked(false);
+            const filtered = tempLikes.filter((item) => item !== user.uid);
+            firebase.db.collection("recipes").doc(recipe.id).update(
+              {
+                likedBy: filtered,
+              },
+              { merge: true }
+            );
+            return;
+          }
+          setLiked(true);
+          tempLikes.push(user.uid);
+          firebase.db.collection("recipes").doc(recipe.id).update(
+            {
+              likedBy: tempLikes,
+            },
+            { merge: true }
+          );
+          return;
+        } else {
+          // doc.data() will be undefined in this case
+          console.log("No such document!");
+        }
+      })
+      .catch((error) => {
+        console.log("Error getting document:", error);
+      });
+  };
+
+  const handleCheckLikes = () => {
+    recipe.likedBy.forEach((like) => {
+      if (like === user.uid) {
+        return setLiked(true);
+      } else {
+        return setLiked(false);
+      }
+    });
   };
   return (
     <SafeAreaView>
       <TouchableOpacity
         onPress={() => {
-          Actions.Recipe({ recipe: recipe });
+          Actions.Recipe({ recipe: recipe, liked: liked, setLiked: setLiked });
           Actions.push("");
         }}
       >
         <ImageBackground
-          style={{ width: 300, height: 300 }}
+          style={{ width: 350, height: 350 }}
           imageStyle={{ borderRadius: 30 }}
           source={{ uri: recipe.photo }}
         >
