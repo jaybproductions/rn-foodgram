@@ -81,7 +81,6 @@ function RecipeCard({ recipe }) {
       <TouchableOpacity
         onPress={() => {
           Actions.Recipe({ recipe: recipe, liked: liked, setLiked: setLiked });
-          Actions.push("");
         }}
       >
         <ImageBackground

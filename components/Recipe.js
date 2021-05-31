@@ -29,12 +29,12 @@ function Recipe({ recipe, liked, setLiked }) {
   useEffect(() => {
     if (!user) return;
     handleCheckLikes();
-    console.warn(liked);
-  }, [liked]);
+  }, [liked, recipe]);
 
   const handleLike = () => {
-    const docRef = firebase.db.collection("recipes").doc(recipe.id);
     Actions.refresh({ recipe: recipe, liked: !liked, setLiked: setLiked });
+    console.warn(recipe.id);
+    const docRef = firebase.db.collection("recipes").doc(recipe.id);
 
     docRef
       .get()
@@ -43,7 +43,9 @@ function Recipe({ recipe, liked, setLiked }) {
           let tempLikes = [...doc.data().likedBy];
           if (tempLikes.includes(user.uid)) {
             setLiked(false);
-            const filtered = tempLikes.filter((item) => item !== user.uid);
+            const filtered = tempLikes.filter(
+              (item) => item !== user.uid && item === recipe.id
+            );
             firebase.db.collection("recipes").doc(recipe.id).update(
               {
                 likedBy: filtered,
