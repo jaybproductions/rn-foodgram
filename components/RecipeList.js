@@ -4,35 +4,19 @@ import RecipeCard from "./RecipeCard";
 import axios from "axios";
 import { ScrollView } from "react-native-gesture-handler";
 import firebase from "../firebase";
+import { getRecipes } from "../utils/helpers";
 
 function RecipeList() {
   const [recipes, setRecipes] = useState([]);
   useEffect(() => {
-    getRecipes();
+    async function fetchData() {
+      const data = await getRecipes();
+      setRecipes(data);
+    }
+
+    fetchData();
   }, []);
 
-  const getRecipes = async () => {
-    try {
-      let tempDoc = [];
-      firebase.db
-        .collection("recipes")
-        .get()
-        .then((querySnapshot) => {
-          querySnapshot.forEach((doc) => {
-            // doc.data() is never undefined for query doc snapshots
-            tempDoc.push(doc.data());
-          });
-          setRecipes(tempDoc);
-        })
-        .catch((error) => {
-          console.log("Error getting documents: ", error);
-        });
-
-      //setRecipes(response.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
   return (
     <SafeAreaView>
       <ScrollView

@@ -33,7 +33,6 @@ function Recipe({ recipe, liked, setLiked }) {
 
   const handleLike = () => {
     Actions.refresh({ recipe: recipe, liked: !liked, setLiked: setLiked });
-    console.warn(recipe.id);
     const docRef = firebase.db.collection("recipes").doc(recipe.id);
 
     docRef

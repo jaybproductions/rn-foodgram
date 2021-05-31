@@ -2,8 +2,6 @@ import React, { useEffect, useState, useContext } from "react";
 import {
   SafeAreaView,
   Text,
-  Button,
-  Image,
   ImageBackground,
   View,
   StyleSheet,
@@ -14,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Actions } from "react-native-router-flux";
 import UserContext from "../contexts/UserContext";
 import firebase from "../firebase";
+import { handleCheckLikes } from "../utils/helpers";
 function TabIcon(iconName) {
   return (
     <Text style={styles.icon}>

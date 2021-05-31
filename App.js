@@ -17,6 +17,7 @@ import Profile from "./screens/Profile";
 import Signup from "./screens/Signup";
 import NewPost from "./components/NewPost";
 import Recipe from "./components/Recipe";
+import ImageUpload from "./screens/ImageUpload";
 
 function TabIcon(iconName) {
   return (
@@ -78,6 +79,12 @@ export default function App() {
             <Scene key="Signup" component={Signup} modal hideNavBar={true} />
             <Scene key="NewPost" component={NewPost} modal hideNavBar={true} />
             <Scene key="Recipe" component={Recipe} modal hideNavBar={true} />
+            <Scene
+              key="ImageUpload"
+              component={ImageUpload}
+              modal
+              hideNavBar={true}
+            />
           </Scene>
         </Stack>
       </Router>
